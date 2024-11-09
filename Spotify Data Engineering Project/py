@@ -1,0 +1,36 @@
+import sys
+from awsglue.transforms import *
+from awsglue.utils import getResolvedOptions
+from pyspark.context import SparkContext
+from awsglue.context import GlueContext
+from awsglue.job import Job
+
+args = getResolvedOptions(sys.argv, ['JOB_NAME'])
+sc = SparkContext()
+glueContext = GlueContext(sc)
+spark = glueContext.spark_session
+job = Job(glueContext)
+job.init(args['JOB_NAME'], args)
+
+# Script generated for node artist
+artist_node1731094475205 = glueContext.create_dynamic_frame.from_options(format_options={"quoteChar": "\"", "withHeader": True, "separator": ",", "optimizePerformance": False}, connection_type="s3", format="csv", connection_options={"paths": ["s3://project-spotify-ad/staging/artists.csv"], "recurse": True}, transformation_ctx="artist_node1731094475205")
+
+# Script generated for node album
+album_node1731094476942 = glueContext.create_dynamic_frame.from_options(format_options={"quoteChar": "\"", "withHeader": True, "separator": ",", "optimizePerformance": False}, connection_type="s3", format="csv", connection_options={"paths": ["s3://project-spotify-ad/staging/albums.csv"], "recurse": True}, transformation_ctx="album_node1731094476942")
+
+# Script generated for node tracks
+tracks_node1731094477757 = glueContext.create_dynamic_frame.from_options(format_options={"quoteChar": "\"", "withHeader": True, "separator": ",", "optimizePerformance": False}, connection_type="s3", format="csv", connection_options={"paths": ["s3://project-spotify-ad/staging/track.csv"], "recurse": True}, transformation_ctx="tracks_node1731094477757")
+
+# Script generated for node Join Album & Artist
+JoinAlbumArtist_node1731095027527 = Join.apply(frame1=album_node1731094476942, frame2=artist_node1731094475205, keys1=["artist_id"], keys2=["id"], transformation_ctx="JoinAlbumArtist_node1731095027527")
+
+# Script generated for node Join with track
+Joinwithtrack_node1731095264508 = Join.apply(frame1=tracks_node1731094477757, frame2=JoinAlbumArtist_node1731095027527, keys1=["track_id"], keys2=["track_id"], transformation_ctx="Joinwithtrack_node1731095264508")
+
+# Script generated for node Drop Fields
+DropFields_node1731095349451 = DropFields.apply(frame=Joinwithtrack_node1731095264508, paths=["`.track_id`", "id"], transformation_ctx="DropFields_node1731095349451")
+
+# Script generated for node Destination
+Destination_node1731095410725 = glueContext.write_dynamic_frame.from_options(frame=DropFields_node1731095349451, connection_type="s3", format="glueparquet", connection_options={"path": "s3://project-spotify-ad/datawarehouse/", "partitionKeys": []}, format_options={"compression": "snappy"}, transformation_ctx="Destination_node1731095410725")
+
+job.commit()
